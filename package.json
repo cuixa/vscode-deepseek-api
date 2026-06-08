@@ -1,0 +1,158 @@
+{
+  "name": "vscode-deepseek-api",
+  "displayName": "DeepSeek Code Completion",
+  "description": "Inline code completion for VS Code powered by the DeepSeek API.",
+  "version": "0.0.1",
+  "publisher": "local-dev",
+  "engines": {
+    "vscode": "^1.92.0"
+  },
+  "categories": [
+    "AI",
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:deepseekCompletion.setApiKey",
+    "onCommand:deepseekCompletion.clearApiKey",
+    "onCommand:deepseekCompletion.enable",
+    "onCommand:deepseekCompletion.disable"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "deepseekCompletion.setApiKey",
+        "title": "DeepSeek: Set API Key"
+      },
+      {
+        "command": "deepseekCompletion.clearApiKey",
+        "title": "DeepSeek: Clear API Key"
+      },
+      {
+        "command": "deepseekCompletion.enable",
+        "title": "DeepSeek: Enable Completion"
+      },
+      {
+        "command": "deepseekCompletion.disable",
+        "title": "DeepSeek: Disable Completion"
+      }
+    ],
+    "configuration": {
+      "title": "DeepSeek Code Completion",
+      "properties": {
+        "deepseekCompletion.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable DeepSeek inline code completion."
+        },
+        "deepseekCompletion.apiKey": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Optional fallback API key. Prefer the `DeepSeek: Set API Key` command, which stores the key in VS Code SecretStorage."
+        },
+        "deepseekCompletion.baseUrl": {
+          "type": "string",
+          "default": "https://api.deepseek.com/beta",
+          "description": "DeepSeek API base URL for FIM completion."
+        },
+        "deepseekCompletion.chatBaseUrl": {
+          "type": "string",
+          "default": "https://api.deepseek.com",
+          "description": "DeepSeek API base URL for chat fallback."
+        },
+        "deepseekCompletion.model": {
+          "type": "string",
+          "default": "deepseek-v4-pro",
+          "description": "DeepSeek model name."
+        },
+        "deepseekCompletion.maxTokens": {
+          "type": "number",
+          "default": 128,
+          "minimum": 16,
+          "maximum": 1024,
+          "description": "Maximum generated tokens per completion."
+        },
+        "deepseekCompletion.temperature": {
+          "type": "number",
+          "default": 0.1,
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Sampling temperature."
+        },
+        "deepseekCompletion.debounceMs": {
+          "type": "number",
+          "default": 300,
+          "minimum": 0,
+          "maximum": 2000,
+          "description": "Delay before sending a completion request."
+        },
+        "deepseekCompletion.requestTimeoutMs": {
+          "type": "number",
+          "default": 10000,
+          "minimum": 1000,
+          "maximum": 60000,
+          "description": "HTTP request timeout."
+        },
+        "deepseekCompletion.prefixChars": {
+          "type": "number",
+          "default": 8000,
+          "minimum": 1000,
+          "maximum": 30000,
+          "description": "Maximum number of characters before the cursor sent as context."
+        },
+        "deepseekCompletion.suffixChars": {
+          "type": "number",
+          "default": 4000,
+          "minimum": 0,
+          "maximum": 20000,
+          "description": "Maximum number of characters after the cursor sent as context."
+        },
+        "deepseekCompletion.enabledLanguages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "typescript",
+            "typescriptreact",
+            "javascript",
+            "javascriptreact",
+            "python",
+            "go",
+            "java",
+            "rust",
+            "cpp",
+            "c",
+            "csharp",
+            "php",
+            "ruby"
+          ],
+          "description": "Language IDs where inline completion is enabled."
+        },
+        "deepseekCompletion.stop": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "\n\n\n"
+          ],
+          "description": "Stop sequences used for completion requests."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/vscode": "^1.92.0",
+    "typescript": "^5.7.2",
+    "@vscode/vsce": "^3.2.1"
+  }
+}
