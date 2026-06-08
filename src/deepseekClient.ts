@@ -3,12 +3,15 @@ import { CompletionContext } from './contextBuilder';
 
 export interface DeepSeekClient {
   complete(context: CompletionContext, signal: AbortSignal): Promise<string>;
+  generateCommitMessage(diff: string, signal: AbortSignal): Promise<string>;
 }
 
 interface CompletionChoice {
   text?: string;
+  finish_reason?: string;
   message?: {
     content?: string | null;
+    reasoning_content?: string | null;
   };
 }
 
@@ -34,6 +37,46 @@ export class HttpDeepSeekClient implements DeepSeekClient {
 
       return this.completeWithChat(context, signal);
     }
+  }
+
+  public async generateCommitMessage(diff: string, signal: AbortSignal): Promise<string> {
+    const body = {
+      model: this.config.commitMessageModel,
+      thinking: {
+        type: 'disabled'
+      },
+      messages: [
+        {
+          role: 'system',
+          content: [
+            'You write concise Git commit messages from staged diffs.',
+            'Return exactly one commit message.',
+            'Use Conventional Commits format when possible, such as feat:, fix:, docs:, refactor:, test:, chore:, or build:.',
+            'Keep it under 72 characters.',
+            'Do not wrap the answer in Markdown.',
+            'Do not add explanations.'
+          ].join('\n')
+        },
+        {
+          role: 'user',
+          content: [
+            'Staged diff:',
+            '```diff',
+            diff,
+            '```'
+          ].join('\n')
+        }
+      ],
+      max_tokens: 80,
+      temperature: 0.2
+    };
+
+    const data = await this.post(`${this.config.chatBaseUrl}/chat/completions`, body, signal);
+    const text = data.choices?.[0]?.message?.content;
+    if (!text) {
+      throw new Error(`DeepSeek commit message generation returned no text. ${summarizeResponse(data)}`);
+    }
+    return text;
   }
 
   private async completeWithFim(context: CompletionContext, signal: AbortSignal): Promise<string> {
@@ -125,4 +168,15 @@ function parseJson(text: string): CompletionResponse {
   } catch {
     return {};
   }
+}
+
+function summarizeResponse(data: CompletionResponse): string {
+  const choice = data.choices?.[0];
+  const parts = [
+    choice?.finish_reason ? `finish_reason=${choice.finish_reason}` : undefined,
+    choice?.message?.reasoning_content ? 'reasoning_content=present' : undefined,
+    data.error?.message ? `error=${data.error.message}` : undefined
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(', ') : 'No choices were returned.';
 }

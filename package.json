@@ -16,7 +16,8 @@
     "onCommand:deepseekCompletion.setApiKey",
     "onCommand:deepseekCompletion.clearApiKey",
     "onCommand:deepseekCompletion.enable",
-    "onCommand:deepseekCompletion.disable"
+    "onCommand:deepseekCompletion.disable",
+    "onCommand:deepseekCompletion.generateCommitMessage"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -36,8 +37,29 @@
       {
         "command": "deepseekCompletion.disable",
         "title": "DeepSeek: Disable Completion"
+      },
+      {
+        "command": "deepseekCompletion.generateCommitMessage",
+        "title": "DeepSeek: Generate Commit Message",
+        "icon": "$(sparkle)"
       }
     ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "deepseekCompletion.generateCommitMessage",
+          "when": "scmProvider == git",
+          "group": "navigation@1"
+        }
+      ],
+      "scm/repository": [
+        {
+          "command": "deepseekCompletion.generateCommitMessage",
+          "when": "scmProvider == git",
+          "group": "inline@1"
+        }
+      ]
+    },
     "configuration": {
       "title": "DeepSeek Code Completion",
       "properties": {
@@ -65,6 +87,18 @@
           "type": "string",
           "default": "deepseek-v4-pro",
           "description": "DeepSeek model name."
+        },
+        "deepseekCompletion.commitMessageModel": {
+          "type": "string",
+          "default": "deepseek-v4-flash",
+          "description": "DeepSeek model used to generate Git commit messages."
+        },
+        "deepseekCompletion.commitMessageMaxDiffChars": {
+          "type": "number",
+          "default": 12000,
+          "minimum": 1000,
+          "maximum": 100000,
+          "description": "Maximum staged diff characters sent when generating a commit message."
         },
         "deepseekCompletion.maxTokens": {
           "type": "number",

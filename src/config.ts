@@ -6,6 +6,8 @@ export interface ExtensionConfig {
   baseUrl: string;
   chatBaseUrl: string;
   model: string;
+  commitMessageModel: string;
+  commitMessageMaxDiffChars: number;
   maxTokens: number;
   temperature: number;
   debounceMs: number;
@@ -28,6 +30,8 @@ export async function getConfig(secrets: vscode.SecretStorage): Promise<Extensio
     baseUrl: trimTrailingSlash(config.get<string>('baseUrl', 'https://api.deepseek.com/beta')),
     chatBaseUrl: trimTrailingSlash(config.get<string>('chatBaseUrl', 'https://api.deepseek.com')),
     model: config.get<string>('model', 'deepseek-v4-pro'),
+    commitMessageModel: config.get<string>('commitMessageModel', 'deepseek-v4-flash'),
+    commitMessageMaxDiffChars: config.get<number>('commitMessageMaxDiffChars', 12000),
     maxTokens: config.get<number>('maxTokens', 128),
     temperature: config.get<number>('temperature', 0.1),
     debounceMs: config.get<number>('debounceMs', 300),

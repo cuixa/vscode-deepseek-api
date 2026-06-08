@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { CommitMessageService } from './commitMessageService';
 import { CompletionService } from './completionService';
 import { updateEnabled } from './config';
 
@@ -7,6 +8,7 @@ const API_KEY_SECRET = 'deepseekCompletion.apiKey';
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel('DeepSeek Completion');
   const completionService = new CompletionService(context.secrets, output);
+  const commitMessageService = new CommitMessageService(context.secrets, output);
 
   const selector: vscode.DocumentSelector = [
     { scheme: 'file' },
@@ -49,6 +51,9 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('deepseekCompletion.disable', async () => {
       await updateEnabled(false);
       vscode.window.showInformationMessage('DeepSeek completion disabled.');
+    }),
+    vscode.commands.registerCommand('deepseekCompletion.generateCommitMessage', async () => {
+      await commitMessageService.generate();
     })
   );
 }
