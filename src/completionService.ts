@@ -1,12 +1,17 @@
 import * as vscode from 'vscode';
-import { getConfig } from './config';
-import { buildCompletionContext, shouldRequestCompletion } from './contextBuilder';
+import { ExtensionConfig, getConfig } from './config';
+import { CompletionContext, buildCompletionContext, shouldRequestCompletion } from './contextBuilder';
 import { HttpDeepSeekClient } from './deepseekClient';
 import { postProcessCompletion } from './postProcess';
 
 interface CacheEntry {
   value: string;
   expiresAt: number;
+  uri: string;
+  languageId: string;
+  requestSignature: string;
+  prefix: string;
+  suffix: string;
 }
 
 export class CompletionService {
@@ -33,8 +38,8 @@ export class CompletionService {
     }
 
     const context = buildCompletionContext(document, position, config.prefixChars, config.suffixChars);
-    const cacheKey = this.createCacheKey(document, position, context.prefix, context.suffix);
-    const cached = this.getCached(cacheKey);
+    const cacheKey = this.createCacheKey(document, context, config);
+    const cached = this.getCachedCompletion(document, context, config, cacheKey);
     if (cached !== undefined) {
       return this.toInlineItems(cached, position);
     }
@@ -42,6 +47,11 @@ export class CompletionService {
     await this.delay(config.debounceMs, token);
     if (token.isCancellationRequested) {
       return undefined;
+    }
+
+    const cachedAfterDelay = this.getCachedCompletion(document, context, config, cacheKey);
+    if (cachedAfterDelay !== undefined) {
+      return this.toInlineItems(cachedAfterDelay, position);
     }
 
     this.activeAbortController?.abort();
@@ -56,12 +66,12 @@ export class CompletionService {
       const client = new HttpDeepSeekClient(config);
       const raw = await client.complete(context, abortController.signal);
       const completion = postProcessCompletion(raw, context);
-      this.setCached(cacheKey, completion);
 
       if (!completion) {
         return undefined;
       }
 
+      this.setCached(cacheKey, completion, document, context, config);
       this.output.appendLine(`Completion returned in ${Date.now() - startedAt}ms for ${document.languageId}.`);
       return this.toInlineItems(completion, position);
     } catch (error) {
@@ -107,14 +117,17 @@ export class CompletionService {
     });
   }
 
-  private createCacheKey(document: vscode.TextDocument, position: vscode.Position, prefix: string, suffix: string): string {
+  private createCacheKey(
+    document: vscode.TextDocument,
+    context: CompletionContext,
+    config: ExtensionConfig
+  ): string {
     return [
       document.uri.toString(),
-      document.version,
-      position.line,
-      position.character,
-      hash(prefix),
-      hash(suffix)
+      document.languageId,
+      createRequestSignature(config),
+      hash(context.prefix),
+      hash(context.suffix)
     ].join(':');
   }
 
@@ -129,19 +142,100 @@ export class CompletionService {
       return undefined;
     }
 
+    this.cache.delete(key);
+    this.cache.set(key, entry);
     return entry.value;
   }
 
-  private setCached(key: string, value: string): void {
+  private getCachedCompletion(
+    document: vscode.TextDocument,
+    context: CompletionContext,
+    config: ExtensionConfig,
+    exactKey: string
+  ): string | undefined {
+    const exact = this.getCached(exactKey);
+    if (exact !== undefined) {
+      return exact;
+    }
+
+    const derived = this.getPrefixContinuation(document, context, config);
+    if (derived !== undefined) {
+      this.setCached(exactKey, derived, document, context, config);
+    }
+
+    return derived;
+  }
+
+  private getPrefixContinuation(
+    document: vscode.TextDocument,
+    context: CompletionContext,
+    config: ExtensionConfig
+  ): string | undefined {
+    const now = Date.now();
+    const uri = document.uri.toString();
+    const requestSignature = createRequestSignature(config);
+
+    for (const [key, entry] of Array.from(this.cache.entries()).reverse()) {
+      if (entry.expiresAt < now) {
+        this.cache.delete(key);
+        continue;
+      }
+
+      if (
+        entry.uri !== uri ||
+        entry.languageId !== document.languageId ||
+        entry.requestSignature !== requestSignature ||
+        entry.suffix !== context.suffix ||
+        !context.prefix.startsWith(entry.prefix)
+      ) {
+        continue;
+      }
+
+      const acceptedPrefix = context.prefix.slice(entry.prefix.length);
+      if (!acceptedPrefix || !entry.value.startsWith(acceptedPrefix)) {
+        continue;
+      }
+
+      const remainder = entry.value.slice(acceptedPrefix.length);
+      if (!remainder) {
+        continue;
+      }
+
+      this.cache.delete(key);
+      this.cache.set(key, entry);
+      return remainder;
+    }
+
+    return undefined;
+  }
+
+  private setCached(
+    key: string,
+    value: string,
+    document: vscode.TextDocument,
+    context: CompletionContext,
+    config: ExtensionConfig
+  ): void {
+    if (!value) {
+      return;
+    }
+
     this.cache.set(key, {
       value,
-      expiresAt: Date.now() + 30_000
+      expiresAt: Date.now() + config.cacheTtlMs,
+      uri: document.uri.toString(),
+      languageId: document.languageId,
+      requestSignature: createRequestSignature(config),
+      prefix: context.prefix,
+      suffix: context.suffix
     });
 
-    if (this.cache.size > 100) {
+    while (this.cache.size > config.cacheMaxEntries) {
       const firstKey = this.cache.keys().next().value;
       if (firstKey) {
         this.cache.delete(firstKey);
+      } else {
+        break;
       }
     }
   }
@@ -153,6 +247,17 @@ function hash(value: string): string {
     result = ((result << 5) - result + value.charCodeAt(index)) | 0;
   }
   return result.toString(36);
+}
+
+function createRequestSignature(config: ExtensionConfig): string {
+  return [
+    config.baseUrl,
+    config.chatBaseUrl,
+    config.model,
+    config.maxTokens,
+    config.temperature,
+    config.stop.join('\u0000')
+  ].join('|');
 }
 
 function formatError(error: unknown): string {

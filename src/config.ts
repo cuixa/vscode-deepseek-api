@@ -12,6 +12,8 @@ export interface ExtensionConfig {
   temperature: number;
   debounceMs: number;
   requestTimeoutMs: number;
+  cacheTtlMs: number;
+  cacheMaxEntries: number;
   prefixChars: number;
   suffixChars: number;
   enabledLanguages: string[];
@@ -36,6 +38,8 @@ export async function getConfig(secrets: vscode.SecretStorage): Promise<Extensio
     temperature: config.get<number>('temperature', 0.1),
     debounceMs: config.get<number>('debounceMs', 300),
     requestTimeoutMs: config.get<number>('requestTimeoutMs', 10000),
+    cacheTtlMs: config.get<number>('cacheTtlMs', 120000),
+    cacheMaxEntries: config.get<number>('cacheMaxEntries', 300),
     prefixChars: config.get<number>('prefixChars', 8000),
     suffixChars: config.get<number>('suffixChars', 4000),
     enabledLanguages: config.get<string[]>('enabledLanguages', []),

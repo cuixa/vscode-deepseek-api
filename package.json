@@ -128,6 +128,20 @@
           "maximum": 60000,
           "description": "HTTP request timeout."
         },
+        "deepseekCompletion.cacheTtlMs": {
+          "type": "number",
+          "default": 120000,
+          "minimum": 0,
+          "maximum": 600000,
+          "description": "How long inline completion results stay in the local cache."
+        },
+        "deepseekCompletion.cacheMaxEntries": {
+          "type": "number",
+          "default": 300,
+          "minimum": 0,
+          "maximum": 2000,
+          "description": "Maximum number of inline completion results kept in the local cache."
+        },
         "deepseekCompletion.prefixChars": {
           "type": "number",
           "default": 8000,
