@@ -2,7 +2,7 @@
   "name": "vscode-deepseek-api",
   "displayName": "DeepSeek Code Completion",
   "description": "Inline code completion for VS Code powered by the DeepSeek API.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "local-dev",
   "engines": {
     "vscode": "^1.92.0"
@@ -141,6 +141,13 @@
           "minimum": 0,
           "maximum": 2000,
           "description": "Maximum number of inline completion results kept in the local cache."
+        },
+        "deepseekCompletion.fimFallbackCooldownMs": {
+          "type": "number",
+          "default": 300000,
+          "minimum": 0,
+          "maximum": 3600000,
+          "description": "How long to skip FIM completion after a FIM failure and use chat fallback directly."
         },
         "deepseekCompletion.prefixChars": {
           "type": "number",

@@ -25,9 +25,16 @@ interface CompletionResponse {
 }
 
 export class HttpDeepSeekClient implements DeepSeekClient {
+  private static readonly fimCooldownUntil = new Map<string, number>();
+
   public constructor(private readonly config: ExtensionConfig) {}
 
   public async complete(context: CompletionContext, signal: AbortSignal): Promise<string> {
+    const fimCooldownKey = this.createFimCooldownKey();
+    if (HttpDeepSeekClient.isFimCoolingDown(fimCooldownKey)) {
+      return this.completeWithChat(context, signal);
+    }
+
     try {
       return await this.completeWithFim(context, signal);
     } catch (error) {
@@ -35,6 +42,7 @@ export class HttpDeepSeekClient implements DeepSeekClient {
         throw error;
       }
 
+      this.coolDownFim(fimCooldownKey);
       return this.completeWithChat(context, signal);
     }
   }
@@ -137,6 +145,36 @@ export class HttpDeepSeekClient implements DeepSeekClient {
       throw new Error('DeepSeek chat fallback returned no completion text.');
     }
     return text;
+  }
+
+  private createFimCooldownKey(): string {
+    return [
+      this.config.baseUrl,
+      this.config.chatBaseUrl,
+      this.config.model
+    ].join('|');
+  }
+
+  private coolDownFim(key: string): void {
+    if (this.config.fimFallbackCooldownMs <= 0) {
+      return;
+    }
+
+    HttpDeepSeekClient.fimCooldownUntil.set(key, Date.now() + this.config.fimFallbackCooldownMs);
+  }
+
+  private static isFimCoolingDown(key: string): boolean {
+    const cooldownUntil = HttpDeepSeekClient.fimCooldownUntil.get(key);
+    if (!cooldownUntil) {
+      return false;
+    }
+
+    if (cooldownUntil <= Date.now()) {
+      HttpDeepSeekClient.fimCooldownUntil.delete(key);
+      return false;
+    }
+
+    return true;
   }
 
   private async post(url: string, body: unknown, signal: AbortSignal): Promise<CompletionResponse> {

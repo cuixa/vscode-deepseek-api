@@ -16,6 +16,7 @@ interface CacheEntry {
 
 export class CompletionService {
   private readonly cache = new Map<string, CacheEntry>();
+  private readonly pendingCompletions = new Map<string, Promise<string>>();
   private activeAbortController: AbortController | undefined;
 
   public constructor(
@@ -54,6 +55,21 @@ export class CompletionService {
       return this.toInlineItems(cachedAfterDelay, position);
     }
 
+    const pendingCompletion = this.pendingCompletions.get(cacheKey);
+    if (pendingCompletion) {
+      try {
+        const completion = await pendingCompletion;
+        if (token.isCancellationRequested) {
+          return undefined;
+        }
+
+        this.output.appendLine(`Completion reused pending DeepSeek request for ${document.languageId}.`);
+        return this.toInlineItems(completion, position);
+      } catch {
+        return undefined;
+      }
+    }
+
     this.activeAbortController?.abort();
     const abortController = new AbortController();
     this.activeAbortController = abortController;
@@ -63,9 +79,9 @@ export class CompletionService {
     const startedAt = Date.now();
 
     try {
-      const client = new HttpDeepSeekClient(config);
-      const raw = await client.complete(context, abortController.signal);
-      const completion = postProcessCompletion(raw, context);
+      const request = this.fetchCompletion(config, context, abortController.signal);
+      this.pendingCompletions.set(cacheKey, request);
+      const completion = await request;
 
       if (!completion) {
         return undefined;
@@ -82,10 +98,23 @@ export class CompletionService {
     } finally {
       clearTimeout(timeout);
       tokenDisposable.dispose();
+      if (this.pendingCompletions.get(cacheKey) !== undefined) {
+        this.pendingCompletions.delete(cacheKey);
+      }
       if (this.activeAbortController === abortController) {
         this.activeAbortController = undefined;
       }
     }
+  }
+
+  private async fetchCompletion(
+    config: ExtensionConfig,
+    context: CompletionContext,
+    signal: AbortSignal
+  ): Promise<string> {
+    const client = new HttpDeepSeekClient(config);
+    const raw = await client.complete(context, signal);
+    return postProcessCompletion(raw, context);
   }
 
   private toInlineItems(completion: string, position: vscode.Position): vscode.InlineCompletionItem[] | undefined {
