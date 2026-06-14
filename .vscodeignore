@@ -4,6 +4,7 @@ src/**
 work/**
 outputs/**
 node_modules/**
+.npm-cache/**
 *.vsix
 a.txt
 tsconfig.json
