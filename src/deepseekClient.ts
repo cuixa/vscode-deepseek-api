@@ -68,6 +68,9 @@ export class HttpDeepSeekClient implements DeepSeekClient {
             'You write concise Git commit messages from staged diffs.',
             'Return exactly one commit message.',
             'Use Conventional Commits format when possible, such as feat:, fix:, docs:, refactor:, test:, chore:, or build:.',
+            'Keep the commit type and optional scope in English, for example feat(api): or chore:.',
+            'The summary after the colon must be Simplified Chinese.',
+            'Only keep English words in the summary when they are necessary identifiers, APIs, package names, commands, or file names.',
             'Keep it under 72 characters.',
             'Do not wrap the answer in Markdown.',
             'Do not add explanations.'

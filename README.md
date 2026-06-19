@@ -17,6 +17,7 @@ A minimal VS Code extension that provides inline code completion through the Dee
 ```powershell
 npm.cmd install
 npm.cmd run compile
+npm.cmd run package
 ```
 
 Press `F5` in VS Code to launch an Extension Development Host.
