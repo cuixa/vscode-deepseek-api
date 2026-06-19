@@ -4,6 +4,14 @@ import { CompletionContext } from './contextBuilder';
 export interface DeepSeekClient {
   complete(context: CompletionContext, signal: AbortSignal): Promise<string>;
   generateCommitMessage(diff: string, signal: AbortSignal): Promise<string>;
+  answerSelection(context: SelectionQuestionContext, signal: AbortSignal): Promise<string>;
+}
+
+export interface SelectionQuestionContext {
+  fileName: string;
+  languageId: string;
+  selectedText: string;
+  question: string;
 }
 
 interface CompletionChoice {
@@ -83,6 +91,48 @@ export class HttpDeepSeekClient implements DeepSeekClient {
     const text = data.choices?.[0]?.message?.content;
     if (!text) {
       throw new Error(`DeepSeek commit message generation returned no text. ${summarizeResponse(data)}`);
+    }
+    return text;
+  }
+
+  public async answerSelection(context: SelectionQuestionContext, signal: AbortSignal): Promise<string> {
+    const body = {
+      model: this.config.model,
+      thinking: {
+        type: 'disabled'
+      },
+      messages: [
+        {
+          role: 'system',
+          content: [
+            'You are a helpful assistant answering questions about selected code or text.',
+            'Use the selection as the primary source of context.',
+            'Be accurate and concise, and include code examples only when they help answer the question.',
+            'Reply in the same language as the user question unless the user asks otherwise.'
+          ].join('\n')
+        },
+        {
+          role: 'user',
+          content: [
+            `File: ${context.fileName}`,
+            `Language: ${context.languageId}`,
+            'Selected text:',
+            '```',
+            context.selectedText,
+            '```',
+            'Question:',
+            context.question
+          ].join('\n')
+        }
+      ],
+      max_tokens: this.config.selectionQuestionMaxTokens,
+      temperature: this.config.temperature
+    };
+
+    const data = await this.post(`${this.config.chatBaseUrl}/chat/completions`, body, signal);
+    const text = data.choices?.[0]?.message?.content;
+    if (!text) {
+      throw new Error(`DeepSeek selection question returned no text. ${summarizeResponse(data)}`);
     }
     return text;
   }

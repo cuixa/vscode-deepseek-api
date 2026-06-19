@@ -2,7 +2,7 @@
   "name": "vscode-deepseek-api",
   "displayName": "DeepSeek Code Completion",
   "description": "Inline code completion for VS Code powered by the DeepSeek API.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "local-dev",
   "engines": {
     "vscode": "^1.92.0"
@@ -17,7 +17,8 @@
     "onCommand:deepseekCompletion.clearApiKey",
     "onCommand:deepseekCompletion.enable",
     "onCommand:deepseekCompletion.disable",
-    "onCommand:deepseekCompletion.generateCommitMessage"
+    "onCommand:deepseekCompletion.generateCommitMessage",
+    "onCommand:deepseekCompletion.askSelection"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -42,6 +43,19 @@
         "command": "deepseekCompletion.generateCommitMessage",
         "title": "DeepSeek: Generate Commit Message",
         "icon": "$(sparkle)"
+      },
+      {
+        "command": "deepseekCompletion.askSelection",
+        "title": "DeepSeek: Ask About Selection",
+        "icon": "$(comment-discussion)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "deepseekCompletion.askSelection",
+        "key": "ctrl+alt+d",
+        "mac": "cmd+alt+d",
+        "when": "editorTextFocus && editorHasSelection"
       }
     ],
     "menus": {
@@ -99,6 +113,20 @@
           "minimum": 1000,
           "maximum": 100000,
           "description": "Maximum staged diff characters sent when generating a commit message."
+        },
+        "deepseekCompletion.selectionQuestionMaxChars": {
+          "type": "number",
+          "default": 20000,
+          "minimum": 1000,
+          "maximum": 100000,
+          "description": "Maximum selected-text characters sent with a DeepSeek question."
+        },
+        "deepseekCompletion.selectionQuestionMaxTokens": {
+          "type": "number",
+          "default": 1024,
+          "minimum": 64,
+          "maximum": 8192,
+          "description": "Maximum tokens in DeepSeek answers about selected text."
         },
         "deepseekCompletion.maxTokens": {
           "type": "number",

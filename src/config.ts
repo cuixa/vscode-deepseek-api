@@ -8,6 +8,8 @@ export interface ExtensionConfig {
   model: string;
   commitMessageModel: string;
   commitMessageMaxDiffChars: number;
+  selectionQuestionMaxChars: number;
+  selectionQuestionMaxTokens: number;
   maxTokens: number;
   temperature: number;
   debounceMs: number;
@@ -35,6 +37,8 @@ export async function getConfig(secrets: vscode.SecretStorage): Promise<Extensio
     model: config.get<string>('model', 'deepseek-v4-pro'),
     commitMessageModel: config.get<string>('commitMessageModel', 'deepseek-v4-flash'),
     commitMessageMaxDiffChars: config.get<number>('commitMessageMaxDiffChars', 12000),
+    selectionQuestionMaxChars: config.get<number>('selectionQuestionMaxChars', 20000),
+    selectionQuestionMaxTokens: config.get<number>('selectionQuestionMaxTokens', 1024),
     maxTokens: config.get<number>('maxTokens', 128),
     temperature: config.get<number>('temperature', 0.1),
     debounceMs: config.get<number>('debounceMs', 300),

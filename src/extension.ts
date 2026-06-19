@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { CommitMessageService } from './commitMessageService';
 import { CompletionService } from './completionService';
 import { updateEnabled } from './config';
+import { SelectionQuestionService } from './selectionQuestionService';
 
 const API_KEY_SECRET = 'deepseekCompletion.apiKey';
 
@@ -9,6 +10,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel('DeepSeek Completion');
   const completionService = new CompletionService(context.secrets, output);
   const commitMessageService = new CommitMessageService(context.secrets, output);
+  const selectionQuestionService = new SelectionQuestionService(context.secrets, output);
 
   const selector: vscode.DocumentSelector = [
     { scheme: 'file' },
@@ -17,6 +19,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     output,
+    selectionQuestionService,
     vscode.languages.registerInlineCompletionItemProvider(selector, {
       provideInlineCompletionItems(document, position, inlineContext, token) {
         return completionService.provide(document, position, token);
@@ -54,6 +57,9 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand('deepseekCompletion.generateCommitMessage', async () => {
       await commitMessageService.generate();
+    }),
+    vscode.commands.registerCommand('deepseekCompletion.askSelection', async () => {
+      await selectionQuestionService.ask();
     })
   );
 }
